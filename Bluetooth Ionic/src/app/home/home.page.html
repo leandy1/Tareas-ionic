@@ -1,0 +1,101 @@
+<ion-header [translucent]="true" class="ion-no-border">
+  <ion-toolbar>
+    <ion-title>BLE Scanner</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+
+  <!-- Resumen superior -->
+  <div class="summary-row">
+    <div class="stat-card">
+      <span class="stat-value">{{ devices.length }}</span>
+      <span class="stat-label">Encontrados</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-value">{{ connectedCount() }}</span>
+      <span class="stat-label">Conectados</span>
+    </div>
+  </div>
+
+  <!-- Botón de escaneo -->
+  <div class="scan-panel">
+    <button class="scan-btn" [class.scanning]="isScanning" (click)="toggleScan()">
+      <span class="pulse-ring" *ngIf="isScanning"></span>
+      <ion-icon [name]="isScanning ? 'stop-circle-outline' : 'bluetooth-outline'"></ion-icon>
+      <span>{{ isScanning ? 'Detener búsqueda' : 'Buscar dispositivos' }}</span>
+    </button>
+  </div>
+
+  <!-- Lista de dispositivos -->
+  <div class="device-grid" *ngIf="devices.length > 0">
+    <div
+      class="device-card"
+      *ngFor="let device of devices"
+      [class.selected]="selectedDevice?.deviceId === device.deviceId"
+      (click)="selectDevice(device)"
+    >
+      <div class="device-avatar" [class.connected]="device.connected">
+        <ion-icon name="bluetooth"></ion-icon>
+      </div>
+
+      <div class="device-info">
+        <p class="device-name">{{ device.name || 'Dispositivo sin nombre' }}</p>
+        <p class="device-id">{{ device.deviceId }}</p>
+      </div>
+
+      <div class="signal" [attr.data-level]="signalLevel(device.rssi)">
+        <span class="bar b1"></span>
+        <span class="bar b2"></span>
+        <span class="bar b3"></span>
+        <span class="bar b4"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Estado vacío -->
+  <div class="empty-state" *ngIf="devices.length === 0 && !isScanning">
+    <ion-icon name="bluetooth-outline"></ion-icon>
+    <p>No hay dispositivos aún.<br>Presiona "Buscar dispositivos" para comenzar.</p>
+  </div>
+
+  <!-- Panel de detalle deslizable (Funcionalidad nueva: conectar + explorar servicios GATT) -->
+  <div class="detail-backdrop" *ngIf="selectedDevice" (click)="closeDetail()"></div>
+  <div class="detail-sheet" *ngIf="selectedDevice">
+    <div class="sheet-handle"></div>
+
+    <div class="sheet-header">
+      <div class="device-avatar lg" [class.connected]="selectedDevice.connected">
+        <ion-icon name="bluetooth"></ion-icon>
+      </div>
+      <div>
+        <p class="device-name">{{ selectedDevice.name || 'Dispositivo sin nombre' }}</p>
+        <p class="device-id">{{ selectedDevice.deviceId }}</p>
+      </div>
+    </div>
+
+    <button class="connect-btn" [class.connected]="selectedDevice.connected" (click)="toggleConnection()">
+      <ion-icon [name]="selectedDevice.connected ? 'link-outline' : 'link-outline'"></ion-icon>
+      {{ selectedDevice.connected ? 'Desconectar' : 'Conectar' }}
+    </button>
+
+    <!-- Servicios GATT: solo visibles una vez conectado -->
+    <div class="gatt-section" *ngIf="selectedDevice.connected">
+      <p class="section-title">Servicios GATT disponibles</p>
+
+      <div class="gatt-loading" *ngIf="loadingServices">
+        <ion-spinner name="dots"></ion-spinner>
+        <span>Descubriendo servicios...</span>
+      </div>
+
+      <div class="gatt-service" *ngFor="let service of gattServices">
+        <p class="service-uuid">{{ service.name }}</p>
+        <p class="service-sub">{{ service.uuid }}</p>
+        <div class="char-chip" *ngFor="let c of service.characteristics">{{ c }}</div>
+      </div>
+    </div>
+
+    <button class="close-btn" (click)="closeDetail()">Cerrar</button>
+  </div>
+
+</ion-content>

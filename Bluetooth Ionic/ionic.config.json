@@ -1,0 +1,7 @@
+{
+  "name": "conectividad-dispositivos",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular-standalone"
+}

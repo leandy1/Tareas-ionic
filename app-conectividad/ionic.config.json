@@ -1,7 +1,0 @@
-{
-  "name": "app-conectividad",
-  "integrations": {
-    "capacitor": {}
-  },
-  "type": "angular-standalone"
-}
