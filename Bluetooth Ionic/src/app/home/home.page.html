@@ -44,12 +44,12 @@
 
         <div
           class="estado"
-          [class.activo]="nfcDisponible"
-          [class.inactivo]="!nfcDisponible">
+          [class.activo]="nfcDisponible()"
+          [class.inactivo]="!nfcDisponible()">
 
           <span class="punto"></span>
 
-          {{ estado }}
+          {{ estado() }}
 
         </div>
 
@@ -59,7 +59,7 @@
 
 
     <!-- MENSAJE DE ESCANEO -->
-    <ion-card *ngIf="escaneando">
+    <ion-card *ngIf="escaneando()">
 
       <ion-card-header>
 
@@ -83,7 +83,7 @@
 
 
     <!-- DATOS DETECTADOS -->
-    <ion-card *ngIf="mensaje">
+    <ion-card *ngIf="mensaje()">
 
       <ion-card-header>
 
@@ -100,10 +100,10 @@
       <ion-card-content>
 
         <div class="tipo">
-          Tipo: {{ tipoEtiqueta }}
+          Tipo: {{ tipoEtiqueta() }}
         </div>
 
-        <pre>{{ mensaje }}</pre>
+        <pre>{{ mensaje() }}</pre>
 
       </ion-card-content>
 
