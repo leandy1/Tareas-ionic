@@ -1,101 +1,152 @@
-<ion-header [translucent]="true" class="ion-no-border">
-  <ion-toolbar>
-    <ion-title>BLE Scanner</ion-title>
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-title>NFC Connect</ion-title>
   </ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true">
+<ion-content class="ion-padding">
 
-  <!-- Resumen superior -->
-  <div class="summary-row">
-    <div class="stat-card">
-      <span class="stat-value">{{ devices.length }}</span>
-      <span class="stat-label">Encontrados</span>
-    </div>
-    <div class="stat-card">
-      <span class="stat-value">{{ connectedCount() }}</span>
-      <span class="stat-label">Conectados</span>
-    </div>
-  </div>
+  <div class="contenedor">
 
-  <!-- Botón de escaneo -->
-  <div class="scan-panel">
-    <button class="scan-btn" [class.scanning]="isScanning" (click)="toggleScan()">
-      <span class="pulse-ring" *ngIf="isScanning"></span>
-      <ion-icon [name]="isScanning ? 'stop-circle-outline' : 'bluetooth-outline'"></ion-icon>
-      <span>{{ isScanning ? 'Detener búsqueda' : 'Buscar dispositivos' }}</span>
-    </button>
-  </div>
+    <!-- ENCABEZADO -->
+    <div class="encabezado">
 
-  <!-- Lista de dispositivos -->
-  <div class="device-grid" *ngIf="devices.length > 0">
-    <div
-      class="device-card"
-      *ngFor="let device of devices"
-      [class.selected]="selectedDevice?.deviceId === device.deviceId"
-      (click)="selectDevice(device)"
-    >
-      <div class="device-avatar" [class.connected]="device.connected">
-        <ion-icon name="bluetooth"></ion-icon>
+      <div class="icono-nfc">
+        NFC
       </div>
 
-      <div class="device-info">
-        <p class="device-name">{{ device.name || 'Dispositivo sin nombre' }}</p>
-        <p class="device-id">{{ device.deviceId }}</p>
-      </div>
+      <h1>NFC Connect</h1>
 
-      <div class="signal" [attr.data-level]="signalLevel(device.rssi)">
-        <span class="bar b1"></span>
-        <span class="bar b2"></span>
-        <span class="bar b3"></span>
-        <span class="bar b4"></span>
-      </div>
-    </div>
-  </div>
+      <p>
+        Aplicación para detectar y leer etiquetas NFC
+        utilizando el teléfono Android.
+      </p>
 
-  <!-- Estado vacío -->
-  <div class="empty-state" *ngIf="devices.length === 0 && !isScanning">
-    <ion-icon name="bluetooth-outline"></ion-icon>
-    <p>No hay dispositivos aún.<br>Presiona "Buscar dispositivos" para comenzar.</p>
-  </div>
-
-  <!-- Panel de detalle deslizable (Funcionalidad nueva: conectar + explorar servicios GATT) -->
-  <div class="detail-backdrop" *ngIf="selectedDevice" (click)="closeDetail()"></div>
-  <div class="detail-sheet" *ngIf="selectedDevice">
-    <div class="sheet-handle"></div>
-
-    <div class="sheet-header">
-      <div class="device-avatar lg" [class.connected]="selectedDevice.connected">
-        <ion-icon name="bluetooth"></ion-icon>
-      </div>
-      <div>
-        <p class="device-name">{{ selectedDevice.name || 'Dispositivo sin nombre' }}</p>
-        <p class="device-id">{{ selectedDevice.deviceId }}</p>
-      </div>
     </div>
 
-    <button class="connect-btn" [class.connected]="selectedDevice.connected" (click)="toggleConnection()">
-      <ion-icon [name]="selectedDevice.connected ? 'link-outline' : 'link-outline'"></ion-icon>
-      {{ selectedDevice.connected ? 'Desconectar' : 'Conectar' }}
-    </button>
 
-    <!-- Servicios GATT: solo visibles una vez conectado -->
-    <div class="gatt-section" *ngIf="selectedDevice.connected">
-      <p class="section-title">Servicios GATT disponibles</p>
+    <!-- ESTADO DEL NFC -->
+    <ion-card>
 
-      <div class="gatt-loading" *ngIf="loadingServices">
-        <ion-spinner name="dots"></ion-spinner>
-        <span>Descubriendo servicios...</span>
-      </div>
+      <ion-card-header>
 
-      <div class="gatt-service" *ngFor="let service of gattServices">
-        <p class="service-uuid">{{ service.name }}</p>
-        <p class="service-sub">{{ service.uuid }}</p>
-        <div class="char-chip" *ngFor="let c of service.characteristics">{{ c }}</div>
-      </div>
-    </div>
+        <ion-card-subtitle>
+          Estado del dispositivo
+        </ion-card-subtitle>
 
-    <button class="close-btn" (click)="closeDetail()">Cerrar</button>
+        <ion-card-title>
+          NFC
+        </ion-card-title>
+
+      </ion-card-header>
+
+      <ion-card-content>
+
+        <div
+          class="estado"
+          [class.activo]="nfcDisponible"
+          [class.inactivo]="!nfcDisponible">
+
+          <span class="punto"></span>
+
+          {{ estado }}
+
+        </div>
+
+      </ion-card-content>
+
+    </ion-card>
+
+
+    <!-- MENSAJE DE ESCANEO -->
+    <ion-card *ngIf="escaneando">
+
+      <ion-card-header>
+
+        <ion-card-subtitle>
+          Escaneo automático
+        </ion-card-subtitle>
+
+        <ion-card-title>
+          Esperando NFC
+        </ion-card-title>
+
+      </ion-card-header>
+
+      <ion-card-content>
+
+        Acerca el dispositivo NFC al teléfono.
+
+      </ion-card-content>
+
+    </ion-card>
+
+
+    <!-- DATOS DETECTADOS -->
+    <ion-card *ngIf="mensaje">
+
+      <ion-card-header>
+
+        <ion-card-subtitle>
+          Etiqueta detectada
+        </ion-card-subtitle>
+
+        <ion-card-title>
+          Datos NFC
+        </ion-card-title>
+
+      </ion-card-header>
+
+      <ion-card-content>
+
+        <div class="tipo">
+          Tipo: {{ tipoEtiqueta }}
+        </div>
+
+        <pre>{{ mensaje }}</pre>
+
+      </ion-card-content>
+
+    </ion-card>
+
+
+    <!-- INSTRUCCIONES -->
+    <ion-card class="instrucciones">
+
+      <ion-card-header>
+
+        <ion-card-title>
+          ¿Cómo probar?
+        </ion-card-title>
+
+      </ion-card-header>
+
+      <ion-card-content>
+
+        <ol>
+
+          <li>
+            Activa NFC en el teléfono.
+          </li>
+
+          <li>
+            Abre la aplicación NFC Connect.
+          </li>
+
+          <li>
+            Acerca el dispositivo NFC al teléfono.
+          </li>
+
+          <li>
+            La aplicación detectará la etiqueta automáticamente.
+          </li>
+
+        </ol>
+
+      </ion-card-content>
+
+    </ion-card>
+
   </div>
 
 </ion-content>
