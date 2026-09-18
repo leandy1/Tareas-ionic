@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 import {
@@ -38,12 +38,12 @@ import { App } from '@capacitor/app';
 })
 export class HomePage implements OnInit, OnDestroy {
 
-  estado = 'Comprobando NFC...';
-  mensaje = '';
-  tipoEtiqueta = '';
+  estado = signal('Comprobando NFC...');
+  mensaje = signal('');
+  tipoEtiqueta = signal('');
 
-  nfcDisponible = false;
-  escaneando = false;
+  nfcDisponible = signal(false);
+  escaneando = signal(false);
 
   private nfcListener: any = null;
   private appStateListener: any = null;
@@ -54,11 +54,8 @@ export class HomePage implements OnInit, OnDestroy {
 
   async ngOnInit() {
 
-    // Comprobar NFC al abrir la aplicación
     await this.verificarNFC();
 
-    // Detectar cuando el usuario vuelve
-    // desde la configuración de Android
     this.appStateListener = await App.addListener(
       'appStateChange',
       async ({ isActive }) => {
@@ -66,7 +63,7 @@ export class HomePage implements OnInit, OnDestroy {
         if (isActive) {
 
           console.log(
-            'La aplicación volvió a estar activa'
+            'La aplicacion volvio a estar activa'
           );
 
           await this.verificarNFC();
@@ -79,59 +76,46 @@ export class HomePage implements OnInit, OnDestroy {
 
 
   /**
-   * Comprueba si el teléfono tiene NFC
-   * y si está activado.
+   * Comprueba si el telefono tiene NFC
+   * y si esta activado.
    */
   async verificarNFC() {
 
     try {
 
-      // Comprobar si el dispositivo tiene NFC
       const resultado =
         await CapacitorNfc.isSupported();
 
-      this.nfcDisponible =
-        resultado.supported;
+      this.nfcDisponible.set(resultado.supported);
 
       if (!resultado.supported) {
 
-        this.estado =
-          'Este dispositivo no tiene NFC';
+        this.estado.set('Este dispositivo no tiene NFC');
 
         return;
       }
 
 
-      // Comprobar estado del NFC
       const estadoNfc =
         await CapacitorNfc.getStatus();
 
-      console.log(
-        'Estado NFC:',
-        estadoNfc
-      );
+      console.log('Estado NFC:', estadoNfc);
 
 
       if (
         estadoNfc.status === 'NFC_DISABLED'
       ) {
 
-        this.estado =
-          'NFC está desactivado';
+        this.estado.set('NFC esta desactivado');
 
-        // Preguntar al usuario
         await this.preguntarActivarNFC();
 
         return;
       }
 
 
-      // NFC está activado
-      this.estado =
-        'NFC disponible';
+      this.estado.set('NFC disponible');
 
-
-      // Comenzar escaneo automáticamente
       await this.iniciarEscaneoAutomatico();
 
     } catch (error) {
@@ -141,10 +125,8 @@ export class HomePage implements OnInit, OnDestroy {
         error
       );
 
-      this.estado =
-        'Error al verificar NFC';
-
-      this.nfcDisponible = false;
+      this.estado.set('Error al verificar NFC');
+      this.nfcDisponible.set(false);
     }
   }
 
@@ -160,8 +142,8 @@ export class HomePage implements OnInit, OnDestroy {
         header: 'NFC desactivado',
 
         message:
-          'El NFC está desactivado. ' +
-          '¿Quieres abrir la configuración para activarlo?',
+          'El NFC esta desactivado. ' +
+          'Quieres abrir la configuracion para activarlo?',
 
         buttons: [
 
@@ -172,23 +154,22 @@ export class HomePage implements OnInit, OnDestroy {
 
             handler: () => {
 
-              this.estado =
-                'NFC está desactivado';
+              this.estado.set('NFC esta desactivado');
 
               console.log(
-                'El usuario decidió no activar NFC'
+                'El usuario decidio no activar NFC'
               );
 
             }
           },
 
           {
-            text: 'Sí',
+            text: 'Si',
 
             handler: async () => {
 
               console.log(
-                'El usuario aceptó activar NFC'
+                'El usuario acepto activar NFC'
               );
 
               await this.abrirConfiguracion();
@@ -206,7 +187,7 @@ export class HomePage implements OnInit, OnDestroy {
 
 
   /**
-   * Abre la configuración NFC de Android.
+   * Abre la configuracion NFC de Android.
    */
   async abrirConfiguracion() {
 
@@ -217,7 +198,7 @@ export class HomePage implements OnInit, OnDestroy {
     } catch (error) {
 
       console.error(
-        'Error abriendo configuración NFC:',
+        'Error abriendo configuracion NFC:',
         error
       );
 
@@ -227,28 +208,25 @@ export class HomePage implements OnInit, OnDestroy {
 
 
   /**
-   * Inicia el escaneo NFC automáticamente.
+   * Inicia el escaneo NFC automaticamente.
    */
   async iniciarEscaneoAutomatico() {
 
     try {
 
-      // Evitar múltiples escaneos
-      if (this.escaneando) {
+      if (this.escaneando()) {
         return;
       }
 
 
-      this.escaneando = true;
+      this.escaneando.set(true);
 
-      this.mensaje = '';
-      this.tipoEtiqueta = '';
+      this.mensaje.set('');
+      this.tipoEtiqueta.set('');
 
-      this.estado =
-        'Acerca un dispositivo NFC al teléfono';
+      this.estado.set('Acerca un dispositivo NFC al telefono');
 
 
-      // Crear listener una sola vez
       if (!this.nfcListener) {
 
         this.nfcListener =
@@ -262,25 +240,23 @@ export class HomePage implements OnInit, OnDestroy {
               );
 
 
-              // Tipo de evento NFC
-              this.tipoEtiqueta =
-                event.type || 'NFC';
+              this.tipoEtiqueta.set(
+                event.type || 'NFC'
+              );
 
 
-              // Datos recibidos
-              this.mensaje =
+              this.mensaje.set(
                 JSON.stringify(
                   event.tag || event,
                   null,
                   2
-                );
+                )
+              );
 
 
-              this.estado =
-                'Etiqueta NFC detectada';
+              this.estado.set('Etiqueta NFC detectada');
 
 
-              // Detener lectura automáticamente
               try {
 
                 await CapacitorNfc.stopScanning();
@@ -294,7 +270,7 @@ export class HomePage implements OnInit, OnDestroy {
 
               } finally {
 
-                this.escaneando = false;
+                this.escaneando.set(false);
 
               }
 
@@ -303,12 +279,9 @@ export class HomePage implements OnInit, OnDestroy {
       }
 
 
-      // Comenzar lectura NFC
       await CapacitorNfc.startScanning();
 
-      console.log(
-        'Escaneo NFC iniciado'
-      );
+      console.log('Escaneo NFC iniciado');
 
     } catch (error) {
 
@@ -317,26 +290,21 @@ export class HomePage implements OnInit, OnDestroy {
         error
       );
 
-      this.estado =
-        'Error iniciando NFC';
-
-      this.escaneando = false;
+      this.estado.set('Error iniciando NFC');
+      this.escaneando.set(false);
     }
   }
 
 
   /**
-   * Limpieza al salir de la página.
+   * Limpieza al salir de la pagina.
    */
   async ngOnDestroy() {
 
     try {
 
-      // Detener NFC
       await CapacitorNfc.stopScanning();
 
-
-      // Eliminar listener NFC
       if (this.nfcListener) {
 
         await this.nfcListener.remove();
@@ -344,8 +312,6 @@ export class HomePage implements OnInit, OnDestroy {
         this.nfcListener = null;
       }
 
-
-      // Eliminar listener de estado de la app
       if (this.appStateListener) {
 
         await this.appStateListener.remove();
@@ -363,5 +329,4 @@ export class HomePage implements OnInit, OnDestroy {
     }
 
   }
-
 }
