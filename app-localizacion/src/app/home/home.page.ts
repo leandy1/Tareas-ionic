@@ -1,3 +1,12 @@
+/**
+ * Tarea: Unidad VI - Programación de dispositivos móviles
+ * Desarrollado por: Sandy Ortiz
+ * Matrícula: 100049907
+ * 
+ * Descripción: Implementación de mapa con Leaflet, GPS local (Capacitor) 
+ * y búsqueda de lugares con Nominatim.
+ */
+
 import { Component, OnDestroy } from '@angular/core';
 import {
   IonHeader, IonToolbar, IonTitle, IonContent,
@@ -10,9 +19,9 @@ import { Geolocation } from '@capacitor/geolocation';
 import { Share } from '@capacitor/share';
 
 /**
- * Componente HomePage (App Localización)
- * Renderiza el mapa interactivo, busca puntos de interés vía API (Nominatim)
- * y gestiona la geolocalización del usuario.
+ * HomePage: la pantalla principal de la app de localización.
+ * Aquí se pinta el mapa con Leaflet, buscamos lugares con Nominatim
+ * y mostramos la ubicación actual del usuario con el GPS.
  */
 @Component({
   selector: 'app-home',
@@ -39,10 +48,17 @@ export class HomePage implements OnDestroy {
     addIcons({ locateOutline, shareSocialOutline, mapOutline });
   }
 
+  /**
+   * Hook de Ionic que se dispara cada vez que entramos a la página.
+   * Lo uso para crear el mapa, porque para este momento ya el DOM está listo.
+   */
   ionViewDidEnter() {
     this.initMap();
   }
 
+  /**
+   * Al salir de la página destruyo el mapa para no dejar memoria ocupada.
+   */
   ngOnDestroy() {
     if (this.map) {
       this.map.remove();
@@ -50,12 +66,13 @@ export class HomePage implements OnDestroy {
   }
 
   /**
-   * Inicializa el contenedor del mapa utilizando OpenStreetMap y Leaflet.
+   * Crea el mapa con Leaflet y le agrega los mosaicos de OpenStreetMap.
+   * También arreglo los iconos de los marcadores para que se vean bien.
    */
   private initMap(): void {
     console.log('[Map] Inicializando mapa de Leaflet...');
 
-    // Parche para los iconos por defecto de Leaflet en Angular
+    // Sin este parche, los marcadores por defecto salen "cuadrados" en Angular
     const defaultIcon = L.icon({
       iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
       shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
@@ -80,8 +97,8 @@ export class HomePage implements OnDestroy {
   }
 
   /**
-   * Obtiene las coordenadas actuales mediante Capacitor Geolocation.
-   * Valida permisos y centra el mapa.
+   * Pide permiso de ubicación y obtiene la posición actual del celular.
+   * Después centra el mapa y pone un marcador en donde está el usuario.
    */
   public async getCurrentLocation(): Promise<void> {
     try {
@@ -116,7 +133,8 @@ export class HomePage implements OnDestroy {
   }
 
   /**
-   * Procesa la búsqueda usando la API gratuita Nominatim de OpenStreetMap.
+   * Busca lugares con la API gratuita de Nominatim (OpenStreetMap).
+   * Limpia los marcadores de la búsqueda anterior y dibuja los resultados.
    */
   public async onSearchPlaces(event: any): Promise<void> {
     const query = event.target.value?.trim();
@@ -146,7 +164,8 @@ export class HomePage implements OnDestroy {
   }
 
   /**
-   * Comparte la ubicación actual usando el plugin Capacitor Share.
+   * Comparte la ubicación actual con el plugin de Share de Capacitor.
+   * Se necesita tener el marcador del usuario activo para poder compartir.
    */
   public async shareLocation(): Promise<void> {
     if (!this.currentMarker) {
