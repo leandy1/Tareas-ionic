@@ -1,0 +1,33 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar color="primary">
+    <ion-title>Explorador Local</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="shareLocation()">
+        <ion-icon slot="icon-only" name="share-social-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+  <ion-toolbar color="primary">
+    <ion-searchbar 
+      placeholder="Buscar lugares cercanos (ej. restaurantes)" 
+      (ionInput)="onSearchPlaces($event)"
+      [debounce]="600">
+    </ion-searchbar>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <!-- Contenedor donde Leaflet dibujará el mapa -->
+  <div id="map" class="map-container">
+    <p style="text-align: center; margin-top: 50%; color: gray;">
+      (El mapa de Leaflet se renderizará aquí)
+    </p>
+  </div>
+
+  <!-- Botón flotante para ubicar al usuario vía GPS -->
+  <ion-fab vertical="bottom" horizontal="end" slot="fixed">
+    <ion-fab-button (click)="getCurrentLocation()" color="tertiary">
+      <ion-icon name="locate-outline"></ion-icon>
+    </ion-fab-button>
+  </ion-fab>
+</ion-content>
