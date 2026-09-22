@@ -8,11 +8,10 @@
     </ion-buttons>
   </ion-toolbar>
   <ion-toolbar color="primary">
-    <ion-searchbar 
-      placeholder="Buscar lugares cercanos (ej. restaurantes)" 
-      (ionInput)="onSearchPlaces($event)"
-      [debounce]="600">
-    </ion-searchbar>
+  <ion-searchbar 
+   placeholder="Buscar lugares cercanos (ej. restaurantes)" 
+   (keyup.enter)="onSearchPlaces($event)">
+  </ion-searchbar>
   </ion-toolbar>
 </ion-header>
 

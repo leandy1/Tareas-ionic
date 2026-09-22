@@ -137,44 +137,64 @@ export class HomePage implements OnDestroy {
    * Busca lugares con la API gratuita de Nominatim (OpenStreetMap).
    * Limpia los marcadores de la búsqueda anterior y dibuja los resultados.
    * Si no encuentra nada, muestra un toast avisándole al usuario.
+   *
+   * Se usa un debounce de 400ms: si el usuario sigue escribiendo, se
+   * cancela la búsqueda anterior y solo se dispara la última. Esto evita
+   * saturar la API de Nominatim con una petición por cada tecla, que es
+   * lo que probablemente estaba causando que empezara a bloquear las
+   * búsquedas después de varias consultas seguidas.
    */
   public async onSearchPlaces(event: any): Promise<void> {
-    const query = event.target.value?.trim();
-    if (!query) return;
+  const query = event.target.value?.trim();
+  if (!query) return;
 
-    console.log('[Search] Buscando lugar:', query);
-    if (!this.map) return;
+  await this.performSearch(query);
+}
 
-    const bounds = this.map.getBounds();
-    const viewbox = `${bounds.getWest()},${bounds.getNorth()},${bounds.getEast()},${bounds.getSouth()}`;
+  private async performSearch(query: string): Promise<void> {
+  console.log('[Search] Buscando lugar:', query);
+  if (!this.map) return;
 
-    try {
-      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&viewbox=${viewbox}&bounded=1`;
-      const response = await fetch(url);
-      const data = await response.json();
+  const bounds = this.map.getBounds();
+  const viewbox = `${bounds.getWest()},${bounds.getNorth()},${bounds.getEast()},${bounds.getSouth()}`;
 
-      if (data && data.length > 0) {
-        this.searchMarkers.forEach(marker => this.map?.removeLayer(marker));
-        this.searchMarkers = [];
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&viewbox=${viewbox}&bounded=1`;
+    const response = await fetch(url, {
+      headers: {
+        'Accept-Language': 'es',
+      },
+    });
 
-        const firstResult = data[0];
-        this.map?.setView([firstResult.lat, firstResult.lon], 14);
-
-        data.forEach((place: any) => {
-          const marker = L.marker([place.lat, place.lon]).addTo(this.map!)
-            .bindPopup(place.display_name);
-          this.searchMarkers.push(marker);
-        });
-      } else {
-        // Sin resultados: se avisa al usuario con un toast en vez de
-        // dejarlo sin ninguna respuesta visual.
-        console.log('[Search] Sin resultados para:', query);
-        await this.showNoResultsToast(query);
-      }
-    } catch (error) {
-      console.error('[Search] Error en la API:', error);
+    if (!response.ok) {
+      console.error('[Search] Nominatim respondió con error:', response.status);
+      await this.showErrorToast(`Error del servidor de búsqueda (${response.status}). Intenta de nuevo en unos segundos.`);
+      return;
     }
+
+    const data = await response.json();
+
+    if (data && data.length > 0) {
+      this.searchMarkers.forEach(marker => this.map?.removeLayer(marker));
+      this.searchMarkers = [];
+
+      const firstResult = data[0];
+      this.map?.setView([firstResult.lat, firstResult.lon], 14);
+
+      data.forEach((place: any) => {
+        const marker = L.marker([place.lat, place.lon]).addTo(this.map!)
+          .bindPopup(place.display_name);
+        this.searchMarkers.push(marker);
+      });
+    } else {
+      console.log('[Search] Sin resultados para:', query);
+      await this.showNoResultsToast(query);
+    }
+  } catch (error) {
+    console.error('[Search] Error en la API:', error);
+    await this.showErrorToast('No se pudo conectar con el buscador. Revisa tu conexión a internet.');
   }
+}
 
   /**
    * Muestra un toast que se cierra solo, avisando que no se encontró
@@ -187,6 +207,21 @@ export class HomePage implements OnDestroy {
       position: 'bottom',
       color: 'medium',
       icon: 'mapOutline',
+    });
+    await toast.present();
+  }
+
+  /**
+   * Muestra un toast de error cuando falla la conexión con la API de
+   * búsqueda o el servidor responde con un código de error (ej. 429 por
+   * demasiadas peticiones seguidas).
+   */
+  private async showErrorToast(message: string): Promise<void> {
+    const toast = await this.toastController.create({
+      message,
+      duration: 3000,
+      position: 'bottom',
+      color: 'danger',
     });
     await toast.present();
   }
