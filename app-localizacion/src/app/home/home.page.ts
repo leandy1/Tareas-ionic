@@ -10,7 +10,8 @@
 import { Component, OnDestroy } from '@angular/core';
 import {
   IonHeader, IonToolbar, IonTitle, IonContent,
-  IonSearchbar, IonFab, IonFabButton, IonIcon, IonButtons, IonButton
+  IonSearchbar, IonFab, IonFabButton, IonIcon, IonButtons, IonButton,
+  ToastController
 } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { locateOutline, shareSocialOutline, mapOutline } from 'ionicons/icons';
@@ -44,7 +45,7 @@ export class HomePage implements OnDestroy {
   /** Array para almacenar los pines de las búsquedas y poder limpiarlos */
   private searchMarkers: L.Marker[] = [];
 
-  constructor() {
+  constructor(private toastController: ToastController) {
     addIcons({ locateOutline, shareSocialOutline, mapOutline });
   }
 
@@ -135,6 +136,7 @@ export class HomePage implements OnDestroy {
   /**
    * Busca lugares con la API gratuita de Nominatim (OpenStreetMap).
    * Limpia los marcadores de la búsqueda anterior y dibuja los resultados.
+   * Si no encuentra nada, muestra un toast avisándole al usuario.
    */
   public async onSearchPlaces(event: any): Promise<void> {
     const query = event.target.value?.trim();
@@ -163,10 +165,30 @@ export class HomePage implements OnDestroy {
             .bindPopup(place.display_name);
           this.searchMarkers.push(marker);
         });
+      } else {
+        // Sin resultados: se avisa al usuario con un toast en vez de
+        // dejarlo sin ninguna respuesta visual.
+        console.log('[Search] Sin resultados para:', query);
+        await this.showNoResultsToast(query);
       }
     } catch (error) {
       console.error('[Search] Error en la API:', error);
     }
+  }
+
+  /**
+   * Muestra un toast que se cierra solo, avisando que no se encontró
+   * ningún lugar cercano con ese nombre.
+   */
+  private async showNoResultsToast(query: string): Promise<void> {
+    const toast = await this.toastController.create({
+      message: `No hay "${query}" cerca`,
+      duration: 2500,
+      position: 'bottom',
+      color: 'medium',
+      icon: 'mapOutline',
+    });
+    await toast.present();
   }
 
   /**
