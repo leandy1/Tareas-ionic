@@ -165,7 +165,7 @@ export class HomePage implements OnDestroy {
     // consistente, sin importar el zoom, y sin mostrar resultados de
     // otro país si no hay nada cerca.
     const center = this.map.getCenter();
-    const radiusDegrees = 0.5;
+    const radiusDegrees = 0.1;
     const viewbox = [
       center.lng - radiusDegrees, // oeste
       center.lat + radiusDegrees, // norte
