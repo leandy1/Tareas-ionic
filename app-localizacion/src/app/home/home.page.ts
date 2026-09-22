@@ -138,63 +138,82 @@ export class HomePage implements OnDestroy {
    * Limpia los marcadores de la búsqueda anterior y dibuja los resultados.
    * Si no encuentra nada, muestra un toast avisándole al usuario.
    *
-   * Se usa un debounce de 400ms: si el usuario sigue escribiendo, se
-   * cancela la búsqueda anterior y solo se dispara la última. Esto evita
-   * saturar la API de Nominatim con una petición por cada tecla, que es
-   * lo que probablemente estaba causando que empezara a bloquear las
-   * búsquedas después de varias consultas seguidas.
+   * Se dispara únicamente cuando el usuario presiona Enter (evento
+   * (keyup.enter) en el ion-searchbar del HTML), no en cada tecla. Esto
+   * evita saturar la API de Nominatim con una petición por cada letra.
    */
   public async onSearchPlaces(event: any): Promise<void> {
-  const query = event.target.value?.trim();
-  if (!query) return;
+    const rawQuery = event.target.value?.trim();
+    if (!rawQuery) return;
 
-  await this.performSearch(query);
-}
+    // Se normaliza a minúsculas para que "Santiago", "SANTIAGO" y
+    // "santiago" busquen exactamente lo mismo, sin importar cómo lo
+    // haya escrito el usuario.
+    const query = rawQuery.toLowerCase();
+
+    await this.performSearch(query);
+  }
 
   private async performSearch(query: string): Promise<void> {
-  console.log('[Search] Buscando lugar:', query);
-  if (!this.map) return;
+    console.log('[Search] Buscando lugar:', query);
+    if (!this.map) return;
 
-  const bounds = this.map.getBounds();
-  const viewbox = `${bounds.getWest()},${bounds.getNorth()},${bounds.getEast()},${bounds.getSouth()}`;
+    // En vez de usar los límites de lo que se ve en pantalla (que cambian
+    // según el zoom y causaban que un mapa muy acercado no encontrara
+    // nada), se calcula un radio FIJO alrededor del centro del mapa
+    // (~0.5° ≈ 55 km). Así la búsqueda siempre cubre un área local
+    // consistente, sin importar el zoom, y sin mostrar resultados de
+    // otro país si no hay nada cerca.
+    const center = this.map.getCenter();
+    const radiusDegrees = 0.5;
+    const viewbox = [
+      center.lng - radiusDegrees, // oeste
+      center.lat + radiusDegrees, // norte
+      center.lng + radiusDegrees, // este
+      center.lat - radiusDegrees, // sur
+    ].join(',');
 
-  try {
-    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&viewbox=${viewbox}&bounded=1`;
-    const response = await fetch(url, {
-      headers: {
-        'Accept-Language': 'es',
-      },
-    });
-
-    if (!response.ok) {
-      console.error('[Search] Nominatim respondió con error:', response.status);
-      await this.showErrorToast(`Error del servidor de búsqueda (${response.status}). Intenta de nuevo en unos segundos.`);
-      return;
-    }
-
-    const data = await response.json();
-
-    if (data && data.length > 0) {
-      this.searchMarkers.forEach(marker => this.map?.removeLayer(marker));
-      this.searchMarkers = [];
-
-      const firstResult = data[0];
-      this.map?.setView([firstResult.lat, firstResult.lon], 14);
-
-      data.forEach((place: any) => {
-        const marker = L.marker([place.lat, place.lon]).addTo(this.map!)
-          .bindPopup(place.display_name);
-        this.searchMarkers.push(marker);
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&viewbox=${viewbox}&bounded=1`;
+      const response = await fetch(url, {
+        headers: {
+          // Nominatim exige identificar la app para no bloquear las peticiones
+          // por su política de uso (ver https://operations.osmfoundation.org/policies/nominatim/).
+          'Accept-Language': 'es',
+        },
       });
-    } else {
-      console.log('[Search] Sin resultados para:', query);
-      await this.showNoResultsToast(query);
+
+      if (!response.ok) {
+        console.error('[Search] Nominatim respondió con error:', response.status);
+        await this.showErrorToast(`Error del servidor de búsqueda (${response.status}). Intenta de nuevo en unos segundos.`);
+        return;
+      }
+
+      const data = await response.json();
+
+      if (data && data.length > 0) {
+        this.searchMarkers.forEach(marker => this.map?.removeLayer(marker));
+        this.searchMarkers = [];
+
+        const firstResult = data[0];
+        this.map?.setView([firstResult.lat, firstResult.lon], 14);
+
+        data.forEach((place: any) => {
+          const marker = L.marker([place.lat, place.lon]).addTo(this.map!)
+            .bindPopup(place.display_name);
+          this.searchMarkers.push(marker);
+        });
+      } else {
+        // Sin resultados: se avisa al usuario con un toast en vez de
+        // dejarlo sin ninguna respuesta visual.
+        console.log('[Search] Sin resultados para:', query);
+        await this.showNoResultsToast(query);
+      }
+    } catch (error) {
+      console.error('[Search] Error en la API:', error);
+      await this.showErrorToast('No se pudo conectar con el buscador. Revisa tu conexión a internet.');
     }
-  } catch (error) {
-    console.error('[Search] Error en la API:', error);
-    await this.showErrorToast('No se pudo conectar con el buscador. Revisa tu conexión a internet.');
   }
-}
 
   /**
    * Muestra un toast que se cierra solo, avisando que no se encontró
