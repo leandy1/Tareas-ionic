@@ -141,8 +141,14 @@ export class HomePage implements OnDestroy {
     if (!query) return;
 
     console.log('[Search] Buscando lugar:', query);
+    if (!this.map) return;
+
+    const bounds = this.map.getBounds();
+    const viewbox = `${bounds.getWest()},${bounds.getNorth()},${bounds.getEast()},${bounds.getSouth()}`;
+
     try {
-      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`);
+      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&viewbox=${viewbox}&bounded=1`;
+      const response = await fetch(url);
       const data = await response.json();
 
       if (data && data.length > 0) {
